@@ -2,12 +2,31 @@
   <div id="app">
     <div class="container">
       <div id="settings">
-        <div class="setting" v-for="key in Object.keys(settings)" :key="key">
-          <input type="checkbox" :id="key" v-model="settings[key]" />
-          <label :for="key">{{key}}</label>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.autoGenerateColumns" id="autoGenerateColumns" />
+          <label for="autoGenerateColumns">Auto Generate Columns</label>
+        </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.canResizeColumns" id="canResizeColumns" />
+          <label for="canResizeColumns">Can Resize Columns</label>
+        </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.canResizeRows" id="canResizeRows" />
+          <label for="canResizeRows">Can Resize Rows</label>
+        </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.canReorderColumns" id="canReorderColumns" />
+          <label for="canReorderColumns">Can Reorder Columns</label>
+        </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.canSortColumns" id="canSortColumns" />
+          <label for="canSortColumns">Can Sort Columns</label>
+        </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.stickyHeaders" id="stickyHeaders" />
+          <label for="stickyHeaders">Sticky Headers</label>
         </div>
       </div>
-
       <data-grid :settings="settings" :items="items" />
     </div>
   </div>
@@ -15,7 +34,7 @@
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import { DataGridSettings } from "./components/DataGrid.vue";
+import { DataGridSettings, SortDescriptions, SortDirection } from "./components/DataGrid.vue";
 import DataGrid from "./components/DataGrid.vue";
 
 declare interface AppData {
@@ -44,9 +63,13 @@ export default class App extends Vue {
         canResizeRows: false,
         canReorderColumns: false,
         canSortColumns: false,
-        stickyHeaders: false
+        stickyHeaders: false,
+        sortDescriptions: new SortDescriptions()
       }
     };
+
+    this.appData.settings.sortDescriptions.add({column: "Column 5", direction: SortDirection.Ascending});
+    this.appData.settings.sortDescriptions.add({column: "Column 7", direction: SortDirection.Descending});
   }
 
   get settings() {

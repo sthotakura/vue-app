@@ -22,13 +22,13 @@
                 v-if="settings.canSortColumns"
                 @click.prevent="sortBy(column, $event)"
               >
-                <div class="asc" :class="{hide: sortDescriptions.getDirection(column) == -1}">
-                  <span>{{sortDescriptions.getIndex(column)}}</span>
-                </div>
-                <div class="dsc" :class="{hide: sortDescriptions.getDirection(column) == 1}">
-                  <span>{{sortDescriptions.getIndex(column)}}</span>
-                </div>
+                <div class="asc" :class="{hide: sortDescriptions.getDirection(column) == -1}"></div>
+                <div class="dsc" :class="{hide: sortDescriptions.getDirection(column) == 1}"></div>
               </div>
+              <span
+                class="sort-index"
+                v-if="sortDescriptions.getDirection(column) && sortDescriptions.getDirection(column) != 0"
+              >{{sortDescriptions.getIndex(column)}}</span>
               <column-resizer v-if="settings.canResizeColumns" :height="colResizerHeight" />
             </div>
           </th>
@@ -47,7 +47,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Prop, Vue, Watch, Ref } from "vue-property-decorator";
+import { Component, Prop, Vue, Watch, Ref, Emit } from "vue-property-decorator";
 import ColumnResizer from "./ColumnResizer.vue";
 import RowResizer from "./RowResizer.vue";
 import ColumnDropZone from "./ColumnDropZone.vue";
@@ -60,6 +60,7 @@ export declare interface DataGridSettings {
   canReorderColumns: boolean;
   canSortColumns: boolean;
   stickyHeaders: boolean;
+  sortDescriptions: SortDescriptions;
 }
 
 export enum SortDirection {
@@ -101,7 +102,19 @@ export class SortDescriptions {
   }
 
   public getIndex(column: string) {
-    return this.sortDescriptions.findIndex(d => d.column == column);
+    const index = this.sortDescriptions.findIndex(d => d.column == column);
+    return index != -1 ? index + 1 : index;
+  }
+
+  public clone() {
+    const cloned = new SortDescriptions();
+    this.sortDescriptions.forEach(d =>
+      cloned.add({
+        column: d.column,
+        direction: d.direction
+      })
+    );
+    return cloned;
   }
 }
 
@@ -162,6 +175,7 @@ export default class DataGrid extends Vue {
   configure() {
     this.configureOverlays();
     this.configureStickyHeaders();
+    this.configureSortDescriptions();
   }
 
   configureOverlays() {
@@ -192,6 +206,14 @@ export default class DataGrid extends Vue {
     }
   }
 
+  configureSortDescriptions() {
+    if (!this.settings.canSortColumns) {
+      this.sortDescriptions.clear();
+    } else {
+      this.sortDescriptions = this.settings.sortDescriptions.clone();
+    }
+  }
+
   onDropped(e: DroppedEvent) {
     if (this.from == e.to) return;
 
@@ -211,10 +233,10 @@ export default class DataGrid extends Vue {
   }
 
   sortBy(column: string, e: MouseEvent) {
-    const shiftKeyPressed = e.shiftKey;
+    const ctrlKeyPressed = e.ctrlKey;
     const description = this.sortDescriptions.get(column);
 
-    if (shiftKeyPressed) {
+    if (ctrlKeyPressed) {
       if (description) {
         this.sortDescriptions.remove(column);
       } else {
@@ -237,6 +259,12 @@ export default class DataGrid extends Vue {
         });
       }
     }
+
+    this.emitSort();
+  }
+
+  @Emit("sort") emitSort() {
+    return this.sortDescriptions.clone();
   }
 }
 </script>
@@ -296,5 +324,13 @@ td {
 }
 .sort-indicator .dsc.hide {
   opacity: 0;
+}
+.sort-index {
+  background: #007bff;
+  border-radius: 5px;
+  color: white;
+  font-size: 10px;
+  margin: auto 3px auto 3px;
+  min-width: 10px;
 }
 </style>
