@@ -7,6 +7,7 @@
       class="search-bar"
       v-model="searchText"
     />
+    <action-bar v-if="hasTableActions" :actions="settings.tableActions" />
     <table ref="table">
       <thead>
         <tr ref="headRow">
@@ -69,6 +70,7 @@ import RowResizer from "./RowResizer.vue";
 import ColumnDropZone from "./ColumnDropZone.vue";
 import { DroppedEvent } from "./ColumnDropZone.vue";
 import ActionMenu from "./ActionMenu.vue";
+import ActionBar from "./ActionBar.vue";
 
 export enum RowActionsPosition {
   Left = -1,
@@ -161,7 +163,8 @@ export class DataGridSettings {
     ColumnResizer,
     RowResizer,
     ColumnDropZone,
-    ActionMenu
+    ActionMenu,
+    ActionBar
   }
 })
 export default class DataGrid extends Vue {

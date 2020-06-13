@@ -67,6 +67,7 @@ export default class App extends Vue {
 
   created() {
     this.setSortDescriptions();
+    this.setTableActions();
     this.setRowActions();
   }
 
@@ -99,6 +100,16 @@ export default class App extends Vue {
       { label: "Action Two", execute: this.execute, canExecute: this.canExecute },
       { label: "Action 3", execute: this.execute, canExecute: this.canExecute }
     ];
+  }
+
+  setTableActions() {
+    this.appData.settings.tableActions = [
+      { label: "Action One", execute: this.execute, canExecute: this.canExecute },
+      { label: "Action Two", execute: this.execute, canExecute: this.canExecute },
+      { label: "Action Three", execute: this.execute, canExecute: this.canExecute },
+      { label: "Action Four", execute: this.execute, canExecute: this.canExecute },
+      { label: "Action Five", execute: this.execute, canExecute: this.canExecute },
+    ]
   }
 
   execute(o: unknown) {
