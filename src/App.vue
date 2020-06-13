@@ -26,6 +26,10 @@
           <input type="checkbox" v-model="settings.stickyHeaders" id="stickyHeaders" />
           <label for="stickyHeaders">Sticky Headers</label>
         </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.showSearchBar" id="showSearchBar" />
+          <label for="showSearchBar">Show Search Bar</label>
+        </div>
       </div>
       <data-grid :settings="settings" :items="items" />
     </div>
@@ -34,7 +38,12 @@
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import { DataGridSettings, SortDescriptions, SortDirection } from "./components/DataGrid.vue";
+import {
+  DataGridSettings,
+  SortDescriptions,
+  SortDirection,
+  RowActionsPosition
+} from "./components/DataGrid.vue";
 import DataGrid from "./components/DataGrid.vue";
 
 declare interface AppData {
@@ -64,12 +73,39 @@ export default class App extends Vue {
         canReorderColumns: false,
         canSortColumns: false,
         stickyHeaders: false,
-        sortDescriptions: new SortDescriptions()
+        sortDescriptions: new SortDescriptions(),
+        tableActions: [],
+        rowActions: [],
+        rowActionsPosition: RowActionsPosition.Both,
+        showSearchBar: false
       }
     };
 
-    this.appData.settings.sortDescriptions.add({column: "Column 5", direction: SortDirection.Ascending});
-    this.appData.settings.sortDescriptions.add({column: "Column 7", direction: SortDirection.Descending});
+    this.appData.settings.sortDescriptions.add({
+      column: "Column 5",
+      direction: SortDirection.Ascending
+    });
+    this.appData.settings.sortDescriptions.add({
+      column: "Column 7",
+      direction: SortDirection.Descending
+    });
+    this.appData.settings.rowActions = [
+      {
+        label: "Edit",
+        execute: this.edit,
+        canExecute: this.canEdit
+      },
+      {
+        label: "Action Two",
+        execute: this.edit,
+        canExecute: this.canEdit
+      },
+      {
+        label: "Action 3",
+        execute: this.edit,
+        canExecute: this.canEdit
+      }    
+      ];
   }
 
   get settings() {
@@ -86,6 +122,17 @@ export default class App extends Vue {
       data.push(dataItem);
     }
     return data;
+  }
+
+  edit(o: unknown) {
+    console.log("execute");
+    console.log(o);
+  }
+
+  canEdit(o: unknown) {
+    console.log("can execute");
+    console.log(o);
+    return true;
   }
 }
 </script>

@@ -1,8 +1,16 @@
 <template>
   <div>
+    <input
+      v-if="settings.showSearchBar"
+      type="text"
+      placeholder="Search"
+      class="search-bar"
+      v-model="searchText"
+    />
     <table ref="table">
       <thead>
         <tr ref="headRow">
+          <th v-if="showRowActions && settings.rowActionsPosition <= 0">Actions</th>
           <th
             v-for="column in columns"
             :key="column"
@@ -32,13 +40,20 @@
               <column-resizer v-if="settings.canResizeColumns" :height="colResizerHeight" />
             </div>
           </th>
+          <th v-if="showRowActions && settings.rowActionsPosition >= 0">Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(item, rowindex) in items" :key="rowindex" ref="bodyRows">
+          <td v-if="showRowActions && settings.rowActionsPosition <= 0" class="actions-cell">
+            <action-menu :actions="settings.rowActions" :item="item"/>
+          </td>
           <td v-for="(column, colindex) in columns" :key="column">
             <row-resizer v-if="settings.canResizeRows && colindex == 0" :width="rowResizerWidth" />
             {{item[column]}}
+          </td>
+          <td v-if="showRowActions && settings.rowActionsPosition >= 0" class="actions-cell">
+            <action-menu :actions="settings.rowActions" :item="item"/>
           </td>
         </tr>
       </tbody>
@@ -52,6 +67,19 @@ import ColumnResizer from "./ColumnResizer.vue";
 import RowResizer from "./RowResizer.vue";
 import ColumnDropZone from "./ColumnDropZone.vue";
 import { DroppedEvent } from "./ColumnDropZone.vue";
+import ActionMenu from "./ActionMenu.vue";
+
+export enum RowActionsPosition {
+  Left = -1,
+  Both = 0,
+  Right = 1,
+}
+
+export declare interface Command {
+  label: string;
+  execute(o: unknown): void;
+  canExecute(o: unknown): boolean;
+}
 
 export declare interface DataGridSettings {
   autoGenerateColumns: boolean;
@@ -61,6 +89,10 @@ export declare interface DataGridSettings {
   canSortColumns: boolean;
   stickyHeaders: boolean;
   sortDescriptions: SortDescriptions;
+  tableActions: Command[];
+  rowActions: Command[];
+  rowActionsPosition: RowActionsPosition;
+  showSearchBar: boolean;
 }
 
 export enum SortDirection {
@@ -122,7 +154,8 @@ export class SortDescriptions {
   components: {
     ColumnResizer,
     RowResizer,
-    ColumnDropZone
+    ColumnDropZone,
+    ActionMenu
   }
 })
 export default class DataGrid extends Vue {
@@ -133,8 +166,13 @@ export default class DataGrid extends Vue {
   public colDropperHeight = 0;
   public rowResizerWidth = 0;
   public sortDescriptions = new SortDescriptions();
+  public showTableActions = false;
+  public showRowActions = false;
+  public searchText = "";
+  public itemsView = new Array<unknown>();
 
   private from = -1;
+  private searchTextTimeout = 0;
 
   @Ref("table") readonly table!: HTMLTableElement;
   @Ref("headRow") readonly headRow!: HTMLTableRowElement;
@@ -162,6 +200,11 @@ export default class DataGrid extends Vue {
     this.configure();
   }
 
+  @Watch("searchText") onSearchTextChanged() {
+    clearTimeout(this.searchTextTimeout);
+    this.searchTextTimeout = setTimeout(() => this.emitSearch(), 500)
+  }
+
   handleDragStart(e: DragEvent) {
     if (!this.settings.canReorderColumns) return;
 
@@ -176,6 +219,7 @@ export default class DataGrid extends Vue {
     this.configureOverlays();
     this.configureStickyHeaders();
     this.configureSortDescriptions();
+    this.configureActions();
   }
 
   configureOverlays() {
@@ -212,6 +256,13 @@ export default class DataGrid extends Vue {
     } else {
       this.sortDescriptions = this.settings.sortDescriptions.clone();
     }
+  }
+
+  configureActions() {
+    this.showTableActions =
+      this.settings.tableActions && this.settings.tableActions.length != 0;
+    this.showRowActions =
+      this.settings.rowActions && this.settings.rowActions.length != 0;
   }
 
   onDropped(e: DroppedEvent) {
@@ -265,6 +316,10 @@ export default class DataGrid extends Vue {
 
   @Emit("sort") emitSort() {
     return this.sortDescriptions.clone();
+  }
+
+  @Emit("search") emitSearch() {
+    return this.searchText;
   }
 }
 </script>
@@ -327,10 +382,21 @@ td {
 }
 .sort-index {
   background: #007bff;
-  border-radius: 5px;
+  border-radius: 50%;
   color: white;
   font-size: 10px;
   margin: auto 3px auto 3px;
   min-width: 10px;
+}
+.search-bar {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  height: 1.5rem;
+  padding-left: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.actions-cell {
+  text-align: center;
 }
 </style>
