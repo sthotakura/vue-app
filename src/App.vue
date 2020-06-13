@@ -40,16 +40,17 @@
 import { Component, Vue } from "vue-property-decorator";
 import {
   DataGridSettings,
-  SortDescriptions,
   SortDirection,
+  SortDescription,
+  SortDescriptions,
   RowActionsPosition
 } from "./components/DataGrid.vue";
 import DataGrid from "./components/DataGrid.vue";
 
-declare interface AppData {
-  rows: number;
-  cols: number;
-  settings: DataGridSettings;
+class AppData {
+  rows = 100;
+  cols = 10;
+  settings = new DataGridSettings();
 }
 
 @Component({
@@ -58,54 +59,15 @@ declare interface AppData {
   }
 })
 export default class App extends Vue {
-  private appData: AppData;
+  public appData = new AppData();
 
   constructor() {
     super();
+  }
 
-    this.appData = {
-      rows: 100,
-      cols: 10,
-      settings: {
-        autoGenerateColumns: true,
-        canResizeColumns: false,
-        canResizeRows: false,
-        canReorderColumns: false,
-        canSortColumns: false,
-        stickyHeaders: false,
-        sortDescriptions: new SortDescriptions(),
-        tableActions: [],
-        rowActions: [],
-        rowActionsPosition: RowActionsPosition.Both,
-        showSearchBar: false
-      }
-    };
-
-    this.appData.settings.sortDescriptions.add({
-      column: "Column 5",
-      direction: SortDirection.Ascending
-    });
-    this.appData.settings.sortDescriptions.add({
-      column: "Column 7",
-      direction: SortDirection.Descending
-    });
-    this.appData.settings.rowActions = [
-      {
-        label: "Edit",
-        execute: this.edit,
-        canExecute: this.canEdit
-      },
-      {
-        label: "Action Two",
-        execute: this.edit,
-        canExecute: this.canEdit
-      },
-      {
-        label: "Action 3",
-        execute: this.edit,
-        canExecute: this.canEdit
-      }    
-      ];
+  created() {
+    this.setSortDescriptions();
+    this.setRowActions();
   }
 
   get settings() {
@@ -124,12 +86,27 @@ export default class App extends Vue {
     return data;
   }
 
-  edit(o: unknown) {
+  setSortDescriptions() {
+    this.appData.settings.sortDescriptions.add(new SortDescription("Column 5", SortDirection.Ascending));
+    this.appData.settings.sortDescriptions.add(new SortDescription("Column 7", SortDirection.Descending));
+  }
+
+  setRowActions() {
+    this.appData.settings.rowActionsPosition = RowActionsPosition.Right;
+
+    this.appData.settings.rowActions = [
+      { label: "Edit", execute: this.execute, canExecute: this.canExecute },
+      { label: "Action Two", execute: this.execute, canExecute: this.canExecute },
+      { label: "Action 3", execute: this.execute, canExecute: this.canExecute }
+    ];
+  }
+
+  execute(o: unknown) {
     console.log("execute");
     console.log(o);
   }
 
-  canEdit(o: unknown) {
+  canExecute(o: unknown) {
     console.log("can execute");
     console.log(o);
     return true;

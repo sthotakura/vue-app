@@ -12,7 +12,7 @@
 <script lang="ts">
 import { Component, Prop, Vue, Watch, Emit, Ref } from "vue-property-decorator";
 
-export declare interface DroppedEvent {
+export interface DroppedEvent {
   to: number;
 }
 

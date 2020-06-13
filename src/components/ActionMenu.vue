@@ -1,9 +1,9 @@
 <template>
-  <div class="action-menu" tabindex="0" @click="openMenu" @blur="closeMenu">
+  <div ref="actionMenu" class="action-menu" tabindex="0" @click="openMenu" @blur="closeMenu">
     <div class="circle"></div>
     <div class="circle"></div>
     <div class="circle"></div>
-    <div class="action-menu-content" :class="{hide: !isOpen}">
+    <div v-if="isOpen" class="action-menu-content">
       <div v-for="action in actions" 
         :key="action.label" 
         class="action-menu-item"
@@ -15,13 +15,15 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Prop } from "vue-property-decorator";
+import { Component, Vue, Prop, Ref } from "vue-property-decorator";
 import { Command } from "./DataGrid.vue";
 
 @Component
 export default class ActionMenu extends Vue {
   @Prop() actions!: Command[];
   @Prop() item: unknown;
+
+  @Ref("actionMenu") readonly actionMenu!: HTMLDivElement;
 
   public isOpen = false;
 
@@ -33,11 +35,16 @@ export default class ActionMenu extends Vue {
   }
 
   public openMenu() {
+    if(this.isOpen) return;
+    
     this.isOpen = true;
   }
 
   public closeMenu() {
+    if(!this.isOpen) return;
+
     this.isOpen = false;
+    this.actionMenu.blur();
   }
 }
 </script>
@@ -77,8 +84,5 @@ export default class ActionMenu extends Vue {
 }
 .action-menu-item:hover {
   background: #eeeeee;
-}
-.action-menu-content.hide {
-  display: none;
 }
 </style>

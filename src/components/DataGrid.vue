@@ -10,7 +10,7 @@
     <table ref="table">
       <thead>
         <tr ref="headRow">
-          <th v-if="showRowActions && settings.rowActionsPosition <= 0">Actions</th>
+          <th v-if="showRowActionsOnLeft">Actions</th>
           <th
             v-for="column in columns"
             :key="column"
@@ -40,19 +40,20 @@
               <column-resizer v-if="settings.canResizeColumns" :height="colResizerHeight" />
             </div>
           </th>
-          <th v-if="showRowActions && settings.rowActionsPosition >= 0">Actions</th>
+          <th v-if="showRowActionsOnRight">Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(item, rowindex) in items" :key="rowindex" ref="bodyRows">
-          <td v-if="showRowActions && settings.rowActionsPosition <= 0" class="actions-cell">
+          <td v-if="showRowActionsOnLeft" class="actions-cell">
+            <row-resizer v-if="settings.canResizeRows" :width="rowResizerWidth" />
             <action-menu :actions="settings.rowActions" :item="item"/>
           </td>
           <td v-for="(column, colindex) in columns" :key="column">
-            <row-resizer v-if="settings.canResizeRows && colindex == 0" :width="rowResizerWidth" />
+            <row-resizer v-if="settings.canResizeRows && colindex == 0 && !showRowActionsOnLeft" :width="rowResizerWidth" />
             {{item[column]}}
           </td>
-          <td v-if="showRowActions && settings.rowActionsPosition >= 0" class="actions-cell">
+          <td v-if="showRowActionsOnRight" class="actions-cell">
             <action-menu :actions="settings.rowActions" :item="item"/>
           </td>
         </tr>
@@ -75,34 +76,19 @@ export enum RowActionsPosition {
   Right = 1,
 }
 
-export declare interface Command {
-  label: string;
-  execute(o: unknown): void;
-  canExecute(o: unknown): boolean;
-}
-
-export declare interface DataGridSettings {
-  autoGenerateColumns: boolean;
-  canResizeColumns: boolean;
-  canResizeRows: boolean;
-  canReorderColumns: boolean;
-  canSortColumns: boolean;
-  stickyHeaders: boolean;
-  sortDescriptions: SortDescriptions;
-  tableActions: Command[];
-  rowActions: Command[];
-  rowActionsPosition: RowActionsPosition;
-  showSearchBar: boolean;
-}
-
 export enum SortDirection {
   Ascending = 1,
   Descending = -1
 }
 
-export declare interface SortDescription {
-  column: string;
-  direction: SortDirection;
+export class SortDescription {
+  column!: string;
+  direction!: SortDirection;
+
+  constructor(column: string, direction: SortDirection) {
+    this.column = column;
+    this.direction = direction;
+  }
 }
 
 export class SortDescriptions {
@@ -150,6 +136,26 @@ export class SortDescriptions {
   }
 }
 
+export interface Command {
+  label: string;
+  execute(o: unknown): void;
+  canExecute(o: unknown): boolean;
+}
+
+export class DataGridSettings {
+  autoGenerateColumns = true;
+  canResizeColumns = false;
+  canResizeRows = false;
+  canReorderColumns = false;
+  canSortColumns = false;
+  stickyHeaders = false;
+  sortDescriptions = new SortDescriptions();
+  tableActions!: Command[];
+  rowActions!: Command[];
+  rowActionsPosition!: RowActionsPosition;
+  showSearchBar!: boolean;
+}
+
 @Component({
   components: {
     ColumnResizer,
@@ -166,10 +172,7 @@ export default class DataGrid extends Vue {
   public colDropperHeight = 0;
   public rowResizerWidth = 0;
   public sortDescriptions = new SortDescriptions();
-  public showTableActions = false;
-  public showRowActions = false;
   public searchText = "";
-  public itemsView = new Array<unknown>();
 
   private from = -1;
   private searchTextTimeout = 0;
@@ -196,6 +199,22 @@ export default class DataGrid extends Vue {
     return null;
   }
 
+  get hasTableActions(): boolean {
+    return this.settings.tableActions && this.settings.tableActions.length != 0;
+  }
+
+  get hasRowActions(): boolean {
+    return this.settings.rowActions && this.settings.rowActions.length != 0;
+  }
+
+  get showRowActionsOnLeft(): boolean {
+    return this.hasRowActions && this.settings.rowActionsPosition <= 0;
+  }
+
+  get showRowActionsOnRight(): boolean {
+    return this.hasRowActions && this.settings.rowActionsPosition >= 0;
+  }
+
   @Watch("settings", { deep: true }) onSettingsChanged() {
     this.configure();
   }
@@ -219,7 +238,6 @@ export default class DataGrid extends Vue {
     this.configureOverlays();
     this.configureStickyHeaders();
     this.configureSortDescriptions();
-    this.configureActions();
   }
 
   configureOverlays() {
@@ -256,13 +274,6 @@ export default class DataGrid extends Vue {
     } else {
       this.sortDescriptions = this.settings.sortDescriptions.clone();
     }
-  }
-
-  configureActions() {
-    this.showTableActions =
-      this.settings.tableActions && this.settings.tableActions.length != 0;
-    this.showRowActions =
-      this.settings.rowActions && this.settings.rowActions.length != 0;
   }
 
   onDropped(e: DroppedEvent) {
