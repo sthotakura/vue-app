@@ -1,5 +1,5 @@
 <template>
-  <div ref="actionMenu" class="action-menu" tabindex="0" @click="openMenu" @blur="closeMenu">
+  <div ref="actionMenu" class="action-menu" @click="openMenu" @blur="closeMenu">
     <div class="circle"></div>
     <div class="circle"></div>
     <div class="circle"></div>
@@ -51,10 +51,10 @@ export default class ActionMenu extends Vue {
 
 <style scoped>
 .circle {
-  height: 5px;
-  width: 5px;
+  height: 4px;
+  width: 4px;
   border-radius: 50%;
-  background: #555555;
+  background: #666666;
   margin-bottom: 2px;
   margin-left: auto;
   margin-right: auto;
@@ -69,18 +69,24 @@ export default class ActionMenu extends Vue {
 }
 .action-menu-content {
   position: absolute;
-  top: 100%;
-  left: 40%;
   border: 1px solid #cccccc;
-  border-radius: 2px;
+  border-radius: 4px;
   z-index: 100;
-  min-width: 100px;
   background: white;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  box-shadow: 0 2px 6px #bbbbbb;
+  padding-right: 1rem;
+  user-select: none;
 }
 .action-menu-item {
   text-align: left;
-  padding: 0.5rem;
+  padding-left: 1rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
   cursor: pointer;
+  width: 100%;
+  white-space: nowrap;
 }
 .action-menu-item:hover {
   background: #eeeeee;

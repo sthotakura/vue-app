@@ -10,7 +10,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue, Prop, Ref } from "vue-property-decorator";
+import { Component, Vue, Prop } from "vue-property-decorator";
 import { Command } from "./DataGrid.vue";
 
 @Component
