@@ -30,6 +30,10 @@
           <input type="checkbox" v-model="settings.showSearchBar" id="showSearchBar" />
           <label for="showSearchBar">Show Search Bar</label>
         </div>
+        <div class="setting">
+          <input type="checkbox" v-model="settings.canSelectRows" id="canSelectRows" />
+          <label for="canSelectRows">Selectable Rows</label>
+        </div>
       </div>
       <data-grid :settings="settings" :items="items" />
     </div>
@@ -43,7 +47,8 @@ import {
   SortDirection,
   SortDescription,
   SortDescriptions,
-  RowActionsPosition
+  RowActionsPosition,
+  Command
 } from "./components/DataGrid.vue";
 import DataGrid from "./components/DataGrid.vue";
 
@@ -51,6 +56,22 @@ class AppData {
   rows = 100;
   cols = 10;
   settings = new DataGridSettings();
+}
+
+class CommandImpl implements Command {
+  public label: string;
+  
+  constructor(label: string) {
+    this.label = label;
+  }  
+
+  public canExecute(o: unknown): boolean {
+    return true;
+  }
+
+  public execute(o: unknown) {
+    alert(`executing ${this.label}`);
+  }
 }
 
 @Component({
@@ -96,19 +117,19 @@ export default class App extends Vue {
     this.appData.settings.rowActionsPosition = RowActionsPosition.Right;
 
     this.appData.settings.rowActions = [
-      { label: "Edit", execute: this.execute, canExecute: this.canExecute },
-      { label: "Action Two", execute: this.execute, canExecute: this.canExecute },
-      { label: "Action 3", execute: this.execute, canExecute: this.canExecute }
+      new CommandImpl("Edit"),
+      new CommandImpl("Action Two"),
+      new CommandImpl("Action 3")
     ];
   }
 
   setTableActions() {
     this.appData.settings.tableActions = [
-      { label: "Action One", execute: this.execute, canExecute: this.canExecute },
-      { label: "Action Two", execute: this.execute, canExecute: this.canExecute },
-      { label: "Action Three", execute: this.execute, canExecute: this.canExecute },
-      { label: "Action Four", execute: this.execute, canExecute: this.canExecute },
-      { label: "Action Five", execute: this.execute, canExecute: this.canExecute },
+      new CommandImpl("Table Action 1"),
+      new CommandImpl("Table Action 2"),
+      new CommandImpl("Table Action 3"),
+      new CommandImpl("Table Action 4"),
+      new CommandImpl("Table Action 5"),
     ]
   }
 

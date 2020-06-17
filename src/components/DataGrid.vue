@@ -11,6 +11,7 @@
     <table ref="table">
       <thead>
         <tr ref="headRow">
+          <th v-if="settings.canSelectRows">Select</th>
           <th v-if="showRowActionsOnLeft">Actions</th>
           <th
             v-for="column in columns"
@@ -46,16 +47,26 @@
       </thead>
       <tbody>
         <tr v-for="(item, rowindex) in items" :key="rowindex" ref="bodyRows">
-          <td v-if="showRowActionsOnLeft" class="actions-cell">
+          <td v-if="settings.canSelectRows">
             <row-resizer v-if="settings.canResizeRows" :width="rowResizerWidth" />
-            <action-menu :actions="settings.rowActions" :item="item"/>
+            <input ref="rowSelectors" type="checkbox" @click="select(item, rowindex)" />
+          </td>
+          <td v-if="showRowActionsOnLeft" class="actions-cell">
+            <row-resizer
+              v-if="settings.canResizeRows && !settings.canSelectRows"
+              :width="rowResizerWidth"
+            />
+            <action-menu :actions="settings.rowActions" :item="item" />
           </td>
           <td v-for="(column, colindex) in columns" :key="column">
-            <row-resizer v-if="settings.canResizeRows && colindex == 0 && !showRowActionsOnLeft" :width="rowResizerWidth" />
+            <row-resizer
+              v-if="settings.canResizeRows && colindex == 0 && !showRowActionsOnLeft && !settings.canSelectRows"
+              :width="rowResizerWidth"
+            />
             {{item[column]}}
           </td>
           <td v-if="showRowActionsOnRight" class="actions-cell">
-            <action-menu :actions="settings.rowActions" :item="item"/>
+            <action-menu :actions="settings.rowActions" :item="item" />
           </td>
         </tr>
       </tbody>
@@ -75,7 +86,7 @@ import ActionBar from "./ActionBar.vue";
 export enum RowActionsPosition {
   Left = -1,
   Both = 0,
-  Right = 1,
+  Right = 1
 }
 
 export enum SortDirection {
@@ -156,6 +167,7 @@ export class DataGridSettings {
   rowActions!: Command[];
   rowActionsPosition!: RowActionsPosition;
   showSearchBar!: boolean;
+  canSelectRows!: boolean;
 }
 
 @Component({
@@ -176,12 +188,14 @@ export default class DataGrid extends Vue {
   public rowResizerWidth = 0;
   public sortDescriptions = new SortDescriptions();
   public searchText = "";
+  public selectedItems = new Array<unknown>();
 
   private from = -1;
   private searchTextTimeout = 0;
 
   @Ref("table") readonly table!: HTMLTableElement;
   @Ref("headRow") readonly headRow!: HTMLTableRowElement;
+  @Ref("rowSelectors") readonly rowSelectors!: Array<HTMLInputElement>;
   @Ref("bodyRows") readonly bodyRows!: Array<HTMLTableRowElement>;
 
   constructor() {
@@ -224,7 +238,7 @@ export default class DataGrid extends Vue {
 
   @Watch("searchText") onSearchTextChanged() {
     clearTimeout(this.searchTextTimeout);
-    this.searchTextTimeout = setTimeout(() => this.emitSearch(), 500)
+    this.searchTextTimeout = setTimeout(() => this.emitSearch(), 500);
   }
 
   handleDragStart(e: DragEvent) {
@@ -328,12 +342,27 @@ export default class DataGrid extends Vue {
     this.emitSort();
   }
 
+  select(item: unknown, itemIndex: number) {
+    if (this.rowSelectors[itemIndex].checked) {
+      this.selectedItems.push(item);
+    } else {
+      const index = this.selectedItems.indexOf(item);
+      if (index > -1) this.selectedItems.splice(index, 1);
+    }
+
+    this.emitSelectionChanged();
+  }
+
   @Emit("sort") emitSort() {
     return this.sortDescriptions.clone();
   }
 
   @Emit("search") emitSearch() {
     return this.searchText;
+  }
+
+  @Emit("selectionChanged") emitSelectionChanged() {
+    return this.selectedItems;
   }
 }
 </script>
