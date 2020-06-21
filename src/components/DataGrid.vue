@@ -8,69 +8,93 @@
       v-model="searchText"
     />
     <action-bar v-if="hasTableActions" :actions="settings.tableActions" />
-    <table ref="table">
-      <thead>
-        <tr ref="headRow">
-          <th v-if="settings.canSelectRows">Select</th>
-          <th v-if="showRowActionsOnLeft">Actions</th>
-          <th
-            v-for="column in columns"
-            :key="column"
-            :class="{sticky: settings.stickyHeaders}"
-            :draggable="settings.canReorderColumns"
-            @dragstart="handleDragStart"
-          >
-            <div class="header">
-              <column-drop-zone
-                v-if="settings.canReorderColumns"
-                :height="colDropperHeight"
-                @dropped="onDropped"
-              />
-              <div class="header-text">{{column}}</div>
-              <div
-                class="sort-indicator"
-                v-if="settings.canSortColumns"
-                @click.prevent="sortBy(column, $event)"
-              >
-                <div class="asc" :class="{hide: sortDescriptions.getDirection(column) == -1}"></div>
-                <div class="dsc" :class="{hide: sortDescriptions.getDirection(column) == 1}"></div>
+    <context-menu
+      :actions="contextMenuCommands"
+      :show="isContextMenuOpen"
+      :positionX="contextMenuPositionX"
+      :positionY="contextMenuPositionY"
+      @closed="onContextMenuClosed"
+    />
+    <div style="display: flex; flex-flow: row nowrap">
+      <table v-if="hasPinnedRows" ref="pinned">
+        <thead>
+          <tr>
+            <th v-for="pinnedColumn in pinnedColumns" :key="pinnedColumn">
+              <div class="header-text">{{pinnedColumn}}</div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, rowindex) in items" :key="rowindex">
+            <td v-for="(col, colindex) in pinnedColumns" :key="colindex">{{row[col]}}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table ref="table">
+        <thead>
+          <tr ref="headRow">
+            <th v-if="settings.canSelectRows" :class="{sticky: settings.stickyHeaders}">Select</th>
+            <th v-if="showRowActionsOnLeft" :class="{sticky: settings.stickyHeaders}">Actions</th>
+            <th
+              v-for="(column, columnIndex) in columns"
+              :key="column"
+              :class="{sticky: settings.stickyHeaders}"
+              :draggable="settings.canReorderColumns"
+              @dragstart="handleDragStart"
+              @contextmenu.prevent="handleContextMenu(columnIndex, $event)"
+            >
+              <div class="header">
+                <column-drop-zone
+                  v-if="settings.canReorderColumns"
+                  :height="colDropperHeight"
+                  @dropped="onDropped"
+                />
+                <div class="header-text">{{column}}</div>
+                <div
+                  class="sort-indicator"
+                  v-if="settings.canSortColumns"
+                  @click.prevent="sortBy(column, $event)"
+                >
+                  <div class="asc" :class="{hide: sortDescriptions.getDirection(column) == -1}"></div>
+                  <div class="dsc" :class="{hide: sortDescriptions.getDirection(column) == 1}"></div>
+                </div>
+                <span
+                  class="sort-index"
+                  v-if="sortDescriptions.getDirection(column) && sortDescriptions.getDirection(column) != 0"
+                >{{sortDescriptions.getIndex(column)}}</span>
+                <column-resizer v-if="settings.canResizeColumns" :height="colResizerHeight" />
               </div>
-              <span
-                class="sort-index"
-                v-if="sortDescriptions.getDirection(column) && sortDescriptions.getDirection(column) != 0"
-              >{{sortDescriptions.getIndex(column)}}</span>
-              <column-resizer v-if="settings.canResizeColumns" :height="colResizerHeight" />
-            </div>
-          </th>
-          <th v-if="showRowActionsOnRight">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(item, rowindex) in items" :key="rowindex" ref="bodyRows">
-          <td v-if="settings.canSelectRows">
-            <row-resizer v-if="settings.canResizeRows" :width="rowResizerWidth" />
-            <input ref="rowSelectors" type="checkbox" @click="select(item, rowindex)" />
-          </td>
-          <td v-if="showRowActionsOnLeft" class="actions-cell">
-            <row-resizer
-              v-if="settings.canResizeRows && !settings.canSelectRows"
-              :width="rowResizerWidth"
-            />
-            <action-menu :actions="settings.rowActions" :item="item" />
-          </td>
-          <td v-for="(column, colindex) in columns" :key="column">
-            <row-resizer
-              v-if="settings.canResizeRows && colindex == 0 && !showRowActionsOnLeft && !settings.canSelectRows"
-              :width="rowResizerWidth"
-            />
-            {{item[column]}}
-          </td>
-          <td v-if="showRowActionsOnRight" class="actions-cell">
-            <action-menu :actions="settings.rowActions" :item="item" />
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            </th>
+            <th v-if="showRowActionsOnRight" :class="{sticky: settings.stickyHeaders}">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, rowindex) in items" :key="rowindex" ref="bodyRows">
+            <td v-if="settings.canSelectRows">
+              <row-resizer v-if="settings.canResizeRows" :width="rowResizerWidth" />
+              <input ref="rowSelectors" type="checkbox" @click="select(item, rowindex)" />
+            </td>
+            <td v-if="showRowActionsOnLeft" class="actions-cell">
+              <row-resizer
+                v-if="settings.canResizeRows && !settings.canSelectRows"
+                :width="rowResizerWidth"
+              />
+              <action-menu :actions="settings.rowActions" :item="item" />
+            </td>
+            <td v-for="(column, colindex) in columns" :key="column">
+              <row-resizer
+                v-if="settings.canResizeRows && colindex == 0 && !showRowActionsOnLeft && !settings.canSelectRows"
+                :width="rowResizerWidth"
+              />
+              {{item[column]}}
+            </td>
+            <td v-if="showRowActionsOnRight" class="actions-cell">
+              <action-menu :actions="settings.rowActions" :item="item" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -82,93 +106,10 @@ import ColumnDropZone from "./ColumnDropZone.vue";
 import { DroppedEvent } from "./ColumnDropZone.vue";
 import ActionMenu from "./ActionMenu.vue";
 import ActionBar from "./ActionBar.vue";
-
-export enum RowActionsPosition {
-  Left = -1,
-  Both = 0,
-  Right = 1
-}
-
-export enum SortDirection {
-  Ascending = 1,
-  Descending = -1
-}
-
-export class SortDescription {
-  column!: string;
-  direction!: SortDirection;
-
-  constructor(column: string, direction: SortDirection) {
-    this.column = column;
-    this.direction = direction;
-  }
-}
-
-export class SortDescriptions {
-  private sortDescriptions = Array<SortDescription>();
-
-  public add(sortDescription: SortDescription) {
-    this.sortDescriptions.push(sortDescription);
-  }
-
-  public remove(column: string) {
-    const description = this.get(column);
-    if (description) {
-      const descriptionIndex = this.sortDescriptions.indexOf(description);
-      this.sortDescriptions.splice(descriptionIndex, 1);
-    }
-  }
-
-  public clear() {
-    this.sortDescriptions = [];
-  }
-
-  public get(column: string) {
-    return this.sortDescriptions.find(d => d.column == column);
-  }
-
-  public getDirection(column: string) {
-    const description = this.get(column);
-    return description ? description.direction : undefined;
-  }
-
-  public getIndex(column: string) {
-    const index = this.sortDescriptions.findIndex(d => d.column == column);
-    return index != -1 ? index + 1 : index;
-  }
-
-  public clone() {
-    const cloned = new SortDescriptions();
-    this.sortDescriptions.forEach(d =>
-      cloned.add({
-        column: d.column,
-        direction: d.direction
-      })
-    );
-    return cloned;
-  }
-}
-
-export interface Command {
-  label: string;
-  execute(o: unknown): void;
-  canExecute(o: unknown): boolean;
-}
-
-export class DataGridSettings {
-  autoGenerateColumns = true;
-  canResizeColumns = false;
-  canResizeRows = false;
-  canReorderColumns = false;
-  canSortColumns = false;
-  stickyHeaders = false;
-  sortDescriptions = new SortDescriptions();
-  tableActions!: Command[];
-  rowActions!: Command[];
-  rowActionsPosition!: RowActionsPosition;
-  showSearchBar!: boolean;
-  canSelectRows!: boolean;
-}
+import ContextMenu from "./ContextMenu.vue";
+import DataGridSettings from "./types/DataGridSettings";
+import { SortDescriptions, SortDirection } from "./types/SortDescriptions";
+import Command from "./types/Command";
 
 @Component({
   components: {
@@ -176,7 +117,8 @@ export class DataGridSettings {
     RowResizer,
     ColumnDropZone,
     ActionMenu,
-    ActionBar
+    ActionBar,
+    ContextMenu
   }
 })
 export default class DataGrid extends Vue {
@@ -189,9 +131,15 @@ export default class DataGrid extends Vue {
   public sortDescriptions = new SortDescriptions();
   public searchText = "";
   public selectedItems = new Array<unknown>();
+  public contextMenuCommands = new Array<Command>();
+  public isContextMenuOpen = false;
+  public contextMenuPositionX = 0;
+  public contextMenuPositionY = 0;
+  public pinnedColumns = new Array<string>();
 
   private from = -1;
   private searchTextTimeout = 0;
+  private contextMenuOpenedOnColumn!: number | undefined;
 
   @Ref("table") readonly table!: HTMLTableElement;
   @Ref("headRow") readonly headRow!: HTMLTableRowElement;
@@ -200,6 +148,16 @@ export default class DataGrid extends Vue {
 
   constructor() {
     super();
+  }
+
+  created() {
+    this.contextMenuCommands = [
+      {
+        label: "Pin Column",
+        canExecute: this.canPinColumn,
+        execute: this.pinColumn
+      }
+    ];
   }
 
   mounted() {
@@ -232,6 +190,10 @@ export default class DataGrid extends Vue {
     return this.hasRowActions && this.settings.rowActionsPosition >= 0;
   }
 
+  get hasPinnedRows(): boolean {
+    return this.pinnedColumns && this.pinnedColumns.length != 0;
+  }
+
   @Watch("settings", { deep: true }) onSettingsChanged() {
     this.configure();
   }
@@ -249,6 +211,26 @@ export default class DataGrid extends Vue {
     const targetElement = e.target as HTMLTableHeaderCellElement;
     targetElement.style.cursor = "grabbing";
     this.from = targetElement.cellIndex;
+  }
+
+  handleContextMenu(columnIndex: number, e: MouseEvent) {
+    this.isContextMenuOpen = true;
+
+    if (e.pageX || e.pageY) {
+      this.contextMenuPositionX = e.pageX;
+      this.contextMenuPositionY = e.pageY;
+    } else if (e.clientX || e.clientY) {
+      this.contextMenuPositionX =
+        e.clientX +
+        document.body.scrollLeft +
+        document.documentElement.scrollLeft;
+      this.contextMenuPositionY =
+        e.clientY +
+        document.body.scrollTop +
+        document.documentElement.scrollTop;
+    }
+
+    this.contextMenuOpenedOnColumn = columnIndex;
   }
 
   configure() {
@@ -311,6 +293,11 @@ export default class DataGrid extends Vue {
     this.from = -1;
   }
 
+  onContextMenuClosed() {
+    this.isContextMenuOpen = false;
+    this.contextMenuOpenedOnColumn = undefined;
+  }
+
   sortBy(column: string, e: MouseEvent) {
     const ctrlKeyPressed = e.ctrlKey;
     const description = this.sortDescriptions.get(column);
@@ -353,6 +340,16 @@ export default class DataGrid extends Vue {
     this.emitSelectionChanged();
   }
 
+  canPinColumn(o: unknown) {
+    return true;
+  }
+
+  pinColumn(o: unknown) {
+    if (this.contextMenuOpenedOnColumn !== undefined) {
+      this.pinnedColumns.push(this.columns![this.contextMenuOpenedOnColumn]);
+    }
+  }
+
   @Emit("sort") emitSort() {
     return this.sortDescriptions.clone();
   }
@@ -375,6 +372,8 @@ table {
 }
 th {
   background: linear-gradient(#ffffff, #cccccc, #aaaaaa);
+  cursor: default;
+  user-select: none;
 }
 [draggable="true"] {
   cursor: grab;

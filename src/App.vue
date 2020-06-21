@@ -42,14 +42,15 @@
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
+import DataGridSettings from "./components/types/DataGridSettings";
 import {
-  DataGridSettings,
   SortDirection,
   SortDescription,
   SortDescriptions,
-  RowActionsPosition,
-  Command
-} from "./components/DataGrid.vue";
+} from "./components/types/SortDescriptions";
+
+import Command from "./components/types/Command";
+import {RowActionsPosition} from "./components/types/RowActionsPosition";
 import DataGrid from "./components/DataGrid.vue";
 
 class AppData {

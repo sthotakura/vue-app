@@ -1,5 +1,5 @@
 <template>
-  <div ref="actionMenu" class="action-menu" @click="openMenu" @blur="closeMenu">
+  <div ref="actionMenu" tabindex="0" class="action-menu" @click="openMenu" @blur="closeMenu">
     <div class="circle"></div>
     <div class="circle"></div>
     <div class="circle"></div>
@@ -16,7 +16,7 @@
 
 <script lang="ts">
 import { Component, Vue, Prop, Ref } from "vue-property-decorator";
-import { Command } from "./DataGrid.vue";
+import Command from "./types/Command";
 
 @Component
 export default class ActionMenu extends Vue {
@@ -66,6 +66,9 @@ export default class ActionMenu extends Vue {
   margin-right: auto;
   border: 1px solid transparent;
   cursor: pointer;
+}
+.action-menu:focus {
+  outline: none;
 }
 .action-menu-content {
   position: absolute;

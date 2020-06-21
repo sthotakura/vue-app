@@ -11,7 +11,7 @@
 
 <script lang="ts">
 import { Component, Vue, Prop } from "vue-property-decorator";
-import { Command } from "./DataGrid.vue";
+import Command from "./types/Command";
 
 @Component
 export default class ActionBar extends Vue {
