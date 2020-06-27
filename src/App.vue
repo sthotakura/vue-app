@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <div class="container">
+      <h2>Settings</h2>
       <div id="settings">
         <div class="setting">
           <input type="checkbox" v-model="settings.autoGenerateColumns" id="autoGenerateColumns" />
@@ -34,6 +35,14 @@
           <input type="checkbox" v-model="settings.canSelectRows" id="canSelectRows" />
           <label for="canSelectRows">Selectable Rows</label>
         </div>
+        <div class="setting">
+          <label for="numberOfRows">Rows</label>
+          <input type="text" v-model="appData.rows" id="numberOfRows" />
+        </div>
+        <div class="setting">
+          <label for="numberOfColumns">Columns</label>
+          <input type="text" v-model="appData.cols" id="numberOfColumns" />
+        </div>
       </div>
       <data-grid :settings="settings" :items="items" />
     </div>
@@ -41,7 +50,7 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from "vue-property-decorator";
+import { Component, Vue, Watch } from "vue-property-decorator";
 import DataGridSettings from "./components/types/DataGridSettings";
 import {
   SortDirection,
@@ -56,6 +65,7 @@ class AppData {
   rows = 100;
   cols = 10;
   settings = new DataGridSettings();
+  items = new Array<unknown>();
 }
 
 class CommandImpl implements Command {
@@ -97,6 +107,7 @@ export default class App extends Vue {
     this.setSortDescriptions();
     this.setTableActions();
     this.setRowActions();
+    this.createItems();
   }
 
   get settings() {
@@ -104,15 +115,27 @@ export default class App extends Vue {
   }
 
   get items() {
+    return this.appData.items;
+  }
+
+  @Watch("appData.rows") onRowsChanged() {
+    this.createItems()
+  }
+
+  @Watch("appData.cols") onColsChanged() {
+    this.createItems();
+  }
+
+  createItems() {
     const data: Array<unknown> = [];
     for (let i = 0; i < this.appData.rows; ++i) {
       const dataItem: any = {};
       for (let j = 0; j < this.appData.cols; ++j) {
-        dataItem["Column " + j] = "Data " + i + j;
+        dataItem["Column " + j] = "Data r" + i + " c" + j;
       }
       data.push(dataItem);
     }
-    return data;
+    this.appData.items = data;
   }
 
   setSortDescriptions() {
@@ -162,14 +185,12 @@ export default class App extends Vue {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
 }
 .container {
   width: 90%;
   margin-left: auto;
   margin-right: auto;
+  padding: 0.25rem;
 }
 #settings {
   display: flex;
@@ -179,5 +200,10 @@ export default class App extends Vue {
 .setting {
   flex: 0 1 auto;
   margin-right: 10px;
+}
+.setting > label {
+  user-select: none;
+  margin-left: 5px;
+  margin-right: 5px;
 }
 </style>
