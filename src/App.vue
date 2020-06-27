@@ -45,12 +45,11 @@ import { Component, Vue } from "vue-property-decorator";
 import DataGridSettings from "./components/types/DataGridSettings";
 import {
   SortDirection,
-  SortDescription,
-  SortDescriptions,
+  SortDescription
 } from "./components/types/SortDescriptions";
 
 import Command from "./components/types/Command";
-import {RowActionsPosition} from "./components/types/RowActionsPosition";
+import { RowActionsPosition } from "./components/types/RowActionsPosition";
 import DataGrid from "./components/DataGrid.vue";
 
 class AppData {
@@ -61,16 +60,16 @@ class AppData {
 
 class CommandImpl implements Command {
   public label: string;
-  
+
   constructor(label: string) {
     this.label = label;
-  }  
+  }
 
-  public canExecute(o: unknown): boolean {
+  public canExecute(): boolean {
     return true;
   }
 
-  public execute(o: unknown) {
+  public execute() {
     alert(`executing ${this.label}`);
   }
 }
@@ -88,6 +87,13 @@ export default class App extends Vue {
   }
 
   created() {
+    this.appData.settings.canResizeColumns = true;
+    this.appData.settings.showSearchBar = true;
+    this.appData.settings.canSelectRows = true;
+    this.appData.settings.canResizeRows = true;
+    this.appData.settings.canReorderColumns = true;
+    this.appData.settings.canSortColumns = true;
+    this.appData.settings.rowActionsPosition = RowActionsPosition.Both;
     this.setSortDescriptions();
     this.setTableActions();
     this.setRowActions();
@@ -110,8 +116,12 @@ export default class App extends Vue {
   }
 
   setSortDescriptions() {
-    this.appData.settings.sortDescriptions.add(new SortDescription("Column 5", SortDirection.Ascending));
-    this.appData.settings.sortDescriptions.add(new SortDescription("Column 7", SortDirection.Descending));
+    this.appData.settings.sortDescriptions.add(
+      new SortDescription("Column 5", SortDirection.Ascending)
+    );
+    this.appData.settings.sortDescriptions.add(
+      new SortDescription("Column 7", SortDirection.Descending)
+    );
   }
 
   setRowActions() {
@@ -130,8 +140,8 @@ export default class App extends Vue {
       new CommandImpl("Table Action 2"),
       new CommandImpl("Table Action 3"),
       new CommandImpl("Table Action 4"),
-      new CommandImpl("Table Action 5"),
-    ]
+      new CommandImpl("Table Action 5")
+    ];
   }
 
   execute(o: unknown) {
@@ -157,7 +167,7 @@ export default class App extends Vue {
   margin-top: 60px;
 }
 .container {
-  width: 1000px;
+  width: 90%;
   margin-left: auto;
   margin-right: auto;
 }

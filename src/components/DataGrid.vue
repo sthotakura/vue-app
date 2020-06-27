@@ -1,25 +1,28 @@
 <template>
-  <div>
-    <input
-      v-if="settings.showSearchBar"
-      type="text"
-      placeholder="Search"
-      class="search-bar"
-      v-model="searchText"
-    />
-    <action-bar v-if="hasTableActions" :actions="settings.tableActions" />
-    <context-menu
-      :actions="contextMenuCommands"
-      :show="isContextMenuOpen"
-      :positionX="contextMenuPositionX"
-      :positionY="contextMenuPositionY"
-      @closed="onContextMenuClosed"
-    />
-    <div style="display: flex; flex-flow: row nowrap">
+  <div class="grid-container">
+    <div class="grid-head">
+      <input
+        v-if="settings.showSearchBar"
+        type="text"
+        placeholder="Search"
+        class="search-bar"
+        v-model="searchText"
+      />
+      <action-bar v-if="hasTableActions" :actions="settings.tableActions" />
+    </div>
+    <div class="grid-body">
+      <context-menu
+        :actions="pinnedContextMenuCommands"
+        :show="isPinnedContextMenuOpen"
+        :positionX="pinnedContextMenuPositionX"
+        :positionY="pinnedContextMenuPositionY"
+        @closed="onPinnedContextMenuClosed"
+      />
       <table v-if="hasPinnedRows" ref="pinned">
         <thead>
           <tr>
-            <th v-for="pinnedColumn in pinnedColumns" :key="pinnedColumn">
+            <th v-for="(pinnedColumn, columnIndex) in pinnedColumns" :key="pinnedColumn"
+                @contextmenu.prevent="handlePinnedContextMenu(columnIndex, $event)">
               <div class="header-text">{{pinnedColumn}}</div>
             </th>
           </tr>
@@ -30,6 +33,13 @@
           </tr>
         </tbody>
       </table>
+      <context-menu
+        :actions="mainContextMenuCommands"
+        :show="isMainContextMenuOpen"
+        :positionX="mainContextMenuPositionX"
+        :positionY="mainContextMenuPositionY"
+        @closed="onMainContextMenuClosed"
+      />
       <table ref="table">
         <thead>
           <tr ref="headRow">
@@ -41,7 +51,7 @@
               :class="{sticky: settings.stickyHeaders}"
               :draggable="settings.canReorderColumns"
               @dragstart="handleDragStart"
-              @contextmenu.prevent="handleContextMenu(columnIndex, $event)"
+              @contextmenu.prevent="handleMainContextMenu(columnIndex, $event)"
             >
               <div class="header">
                 <column-drop-zone
@@ -131,15 +141,24 @@ export default class DataGrid extends Vue {
   public sortDescriptions = new SortDescriptions();
   public searchText = "";
   public selectedItems = new Array<unknown>();
-  public contextMenuCommands = new Array<Command>();
-  public isContextMenuOpen = false;
-  public contextMenuPositionX = 0;
-  public contextMenuPositionY = 0;
+  
+  public mainContextMenuCommands = new Array<Command>();
+  public isMainContextMenuOpen = false;
+  public mainContextMenuPositionX = 0;
+  public mainContextMenuPositionY = 0;
+  
   public pinnedColumns = new Array<string>();
+
+  public pinnedContextMenuCommands = new Array<Command>();
+  public isPinnedContextMenuOpen = false;
+  public pinnedContextMenuPositionX = 0;
+  public pinnedContextMenuPositionY = 0;
 
   private from = -1;
   private searchTextTimeout = 0;
-  private contextMenuOpenedOnColumn!: number | undefined;
+  
+  private mainContextMenuOpenedOnColumn!: number | undefined;
+  private pinnedContextMenuOpenedOnColumn!: number | undefined;
 
   @Ref("table") readonly table!: HTMLTableElement;
   @Ref("headRow") readonly headRow!: HTMLTableRowElement;
@@ -151,13 +170,20 @@ export default class DataGrid extends Vue {
   }
 
   created() {
-    this.contextMenuCommands = [
+    this.mainContextMenuCommands = [
       {
-        label: "Pin Column",
+        label: "Pin",
         canExecute: this.canPinColumn,
         execute: this.pinColumn
       }
     ];
+    this.pinnedContextMenuCommands = [
+      {
+        label: "Unpin",
+        canExecute: this.canUnpinColumn,
+        execute: this.unpinColumn
+      }
+    ]
   }
 
   mounted() {
@@ -165,13 +191,17 @@ export default class DataGrid extends Vue {
     window.onresize = () => this.configureOverlays();
   }
 
-  get columns() {
+  get allColumns(): Array<string> | null {
     if (this.settings.autoGenerateColumns && this.items && this.items.length) {
       const item = this.items[0] as object;
       return Object.keys(item);
     }
 
     return null;
+  }
+
+  get columns() {
+    return this.allColumns?.filter(k => this.pinnedColumns.indexOf(k) < 0);
   }
 
   get hasTableActions(): boolean {
@@ -213,24 +243,44 @@ export default class DataGrid extends Vue {
     this.from = targetElement.cellIndex;
   }
 
-  handleContextMenu(columnIndex: number, e: MouseEvent) {
-    this.isContextMenuOpen = true;
+  handleMainContextMenu(columnIndex: number, e: MouseEvent) {
+    this.isMainContextMenuOpen = true;
 
     if (e.pageX || e.pageY) {
-      this.contextMenuPositionX = e.pageX;
-      this.contextMenuPositionY = e.pageY;
+      this.mainContextMenuPositionX = e.pageX;
+      this.mainContextMenuPositionY = e.pageY;
     } else if (e.clientX || e.clientY) {
-      this.contextMenuPositionX =
+      this.mainContextMenuPositionX =
         e.clientX +
         document.body.scrollLeft +
         document.documentElement.scrollLeft;
-      this.contextMenuPositionY =
+      this.mainContextMenuPositionY =
         e.clientY +
         document.body.scrollTop +
         document.documentElement.scrollTop;
     }
 
-    this.contextMenuOpenedOnColumn = columnIndex;
+    this.mainContextMenuOpenedOnColumn = columnIndex;
+  }
+
+  handlePinnedContextMenu(columnIndex: number, e: MouseEvent) {
+    this.isPinnedContextMenuOpen = true;
+
+    if (e.pageX || e.pageY) {
+      this.pinnedContextMenuPositionX = e.pageX;
+      this.pinnedContextMenuPositionY = e.pageY;
+    } else if (e.clientX || e.clientY) {
+      this.pinnedContextMenuPositionX =
+        e.clientX +
+        document.body.scrollLeft +
+        document.documentElement.scrollLeft;
+      this.pinnedContextMenuPositionY =
+        e.clientY +
+        document.body.scrollTop +
+        document.documentElement.scrollTop;
+    }
+
+    this.pinnedContextMenuOpenedOnColumn = columnIndex;
   }
 
   configure() {
@@ -293,9 +343,14 @@ export default class DataGrid extends Vue {
     this.from = -1;
   }
 
-  onContextMenuClosed() {
-    this.isContextMenuOpen = false;
-    this.contextMenuOpenedOnColumn = undefined;
+  onMainContextMenuClosed() {
+    this.isMainContextMenuOpen = false;
+    this.mainContextMenuOpenedOnColumn = undefined;
+  }
+
+  onPinnedContextMenuClosed() {
+    this.isPinnedContextMenuOpen = false;
+    this.pinnedContextMenuOpenedOnColumn = undefined;
   }
 
   sortBy(column: string, e: MouseEvent) {
@@ -340,13 +395,28 @@ export default class DataGrid extends Vue {
     this.emitSelectionChanged();
   }
 
-  canPinColumn(o: unknown) {
-    return true;
+  canPinColumn = () => true;
+
+  pinColumn() {
+    if (this.mainContextMenuOpenedOnColumn !== undefined) {
+      if (this.columns && this.columns[this.mainContextMenuOpenedOnColumn]) {
+        this.pinnedColumns.push(this.columns[this.mainContextMenuOpenedOnColumn]);
+      }
+    
+      this.$nextTick(() => this.configureOverlays());
+    }
   }
 
-  pinColumn(o: unknown) {
-    if (this.contextMenuOpenedOnColumn !== undefined) {
-      this.pinnedColumns.push(this.columns![this.contextMenuOpenedOnColumn]);
+  canUnpinColumn = () => true;
+
+  unpinColumn() {
+    if (this.pinnedContextMenuOpenedOnColumn !== undefined) {
+      if (this.pinnedColumns && this.pinnedColumns[this.pinnedContextMenuOpenedOnColumn]) {
+        const index = this.pinnedColumns.indexOf(this.pinnedColumns[this.pinnedContextMenuOpenedOnColumn]);
+        this.pinnedColumns.splice(index, 1);
+      }
+
+      this.$nextTick(() => this.configureOverlays());
     }
   }
 
@@ -365,6 +435,10 @@ export default class DataGrid extends Vue {
 </script>
 
 <style scoped>
+.grid-body {
+  display: flex;
+  flex-flow: row nowrap;
+}
 table {
   border: 1px solid #cccccc;
   border-collapse: collapse;
