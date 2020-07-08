@@ -1,13 +1,7 @@
 <template>
   <div class="grid-container">
     <div class="grid-head">
-      <input
-        v-if="settings.showSearchBar"
-        type="text"
-        placeholder="Search"
-        class="search-bar"
-        v-model="searchText"
-      />
+      <search-bar v-if="settings.showSearchBar" @change="onSearchTextChanged" />
       <action-bar v-if="hasTableActions" :actions="settings.tableActions" />
     </div>
     <div class="grid-body">
@@ -117,6 +111,7 @@ import { DroppedEvent } from "./ColumnDropZone.vue";
 import ActionMenu from "./ActionMenu.vue";
 import ActionBar from "./ActionBar.vue";
 import ContextMenu from "./ContextMenu.vue";
+import SearchBar from "./SearchBar.vue";
 import DataGridSettings from "./types/DataGridSettings";
 import { SortDescriptions, SortDirection } from "./types/SortDescriptions";
 import Command from "./types/Command";
@@ -128,7 +123,8 @@ import Command from "./types/Command";
     ColumnDropZone,
     ActionMenu,
     ActionBar,
-    ContextMenu
+    ContextMenu,
+    SearchBar
   }
 })
 export default class DataGrid extends Vue {
@@ -139,7 +135,6 @@ export default class DataGrid extends Vue {
   public colDropperHeight = 0;
   public rowResizerWidth = 0;
   public sortDescriptions = new SortDescriptions();
-  public searchText = "";
   public selectedItems = new Array<unknown>();
   
   public mainContextMenuCommands = new Array<Command>();
@@ -155,7 +150,6 @@ export default class DataGrid extends Vue {
   public pinnedContextMenuPositionY = 0;
 
   private from = -1;
-  private searchTextTimeout = 0;
   
   private mainContextMenuOpenedOnColumn!: number | undefined;
   private pinnedContextMenuOpenedOnColumn!: number | undefined;
@@ -224,13 +218,14 @@ export default class DataGrid extends Vue {
     return this.pinnedColumns && this.pinnedColumns.length != 0;
   }
 
-  @Watch("settings", { deep: true }) onSettingsChanged() {
+  @Watch("settings", { deep: true }) 
+  onSettingsChanged() {
     this.configure();
   }
 
-  @Watch("searchText") onSearchTextChanged() {
-    clearTimeout(this.searchTextTimeout);
-    this.searchTextTimeout = setTimeout(() => this.emitSearch(), 500);
+  @Emit("search")
+  onSearchTextChanged(payload: string) {
+    return payload;
   }
 
   handleDragStart(e: DragEvent) {
@@ -424,10 +419,6 @@ export default class DataGrid extends Vue {
     return this.sortDescriptions.clone();
   }
 
-  @Emit("search") emitSearch() {
-    return this.searchText;
-  }
-
   @Emit("selectionChanged") emitSelectionChanged() {
     return this.selectedItems;
   }
@@ -503,14 +494,6 @@ td {
   font-size: 10px;
   margin: auto 3px auto 3px;
   min-width: 10px;
-}
-.search-bar {
-  width: 100%;
-  margin-bottom: 0.5rem;
-  height: 1.5rem;
-  padding-left: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
 }
 .actions-cell {
   text-align: center;
