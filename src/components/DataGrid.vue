@@ -12,21 +12,6 @@
         :positionY="pinnedContextMenuPositionY"
         @closed="onPinnedContextMenuClosed"
       />
-      <table v-if="hasPinnedRows" ref="pinned">
-        <thead>
-          <tr>
-            <th v-for="(pinnedColumn, columnIndex) in pinnedColumns" :key="pinnedColumn"
-                @contextmenu.prevent="handlePinnedContextMenu(columnIndex, $event)">
-              <div class="header-text">{{pinnedColumn}}</div>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(row, rowindex) in items" :key="rowindex">
-            <td v-for="(col, colindex) in pinnedColumns" :key="colindex">{{row[col]}}</td>
-          </tr>
-        </tbody>
-      </table>
       <context-menu
         :actions="mainContextMenuCommands"
         :show="isMainContextMenuOpen"
@@ -39,6 +24,10 @@
           <tr ref="headRow">
             <th v-if="settings.canSelectRows" :class="{sticky: settings.stickyHeaders}">Select</th>
             <th v-if="showRowActionsOnLeft" :class="{sticky: settings.stickyHeaders}">Actions</th>
+            <th v-for="(pinnedColumn, columnIndex) in pinnedColumns" :key="pinnedColumn"
+                @contextmenu.prevent="handlePinnedContextMenu(columnIndex, $event)">
+              <div class="header-text">{{pinnedColumn}}</div>
+            </th>
             <th
               v-for="(column, columnIndex) in columns"
               :key="column"
@@ -85,6 +74,7 @@
               />
               <action-menu :actions="settings.rowActions" :item="item" />
             </td>
+            <td v-for="(col, colindex) in pinnedColumns" :key="colindex">{{item[col]}}</td>
             <td v-for="(column, colindex) in columns" :key="column">
               <row-resizer
                 v-if="settings.canResizeRows && colindex == 0 && !showRowActionsOnLeft && !settings.canSelectRows"
