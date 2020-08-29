@@ -21,45 +21,15 @@
       />
       <table ref="table">
         <thead>
-          <tr ref="headRow">
-            <th v-if="settings.canSelectRows" :class="{sticky: settings.stickyHeaders}">Select</th>
-            <th v-if="showRowActionsOnLeft" :class="{sticky: settings.stickyHeaders}">Actions</th>
-            <th v-for="(pinnedColumn, columnIndex) in pinnedColumns" :key="pinnedColumn"
-                @contextmenu.prevent="handlePinnedContextMenu(columnIndex, $event)">
-              <div class="header-text">{{pinnedColumn}}</div>
-            </th>
-            <th
-              v-for="(column, columnIndex) in columns"
-              :key="column"
-              :class="{sticky: settings.stickyHeaders}"
-              :draggable="settings.canReorderColumns"
-              @dragstart="handleDragStart"
-              @contextmenu.prevent="handleMainContextMenu(columnIndex, $event)"
-            >
-              <div class="header">
-                <column-drop-zone
-                  v-if="settings.canReorderColumns"
-                  :height="colDropperHeight"
-                  @dropped="onDropped"
-                />
-                <div class="header-text">{{column}}</div>
-                <div
-                  class="sort-indicator"
-                  v-if="settings.canSortColumns"
-                  @click.prevent="sortBy(column, $event)"
-                >
-                  <div class="asc" :class="{hide: sortDescriptions.getDirection(column) == -1}"></div>
-                  <div class="dsc" :class="{hide: sortDescriptions.getDirection(column) == 1}"></div>
-                </div>
-                <span
-                  class="sort-index"
-                  v-if="sortDescriptions.getDirection(column) && sortDescriptions.getDirection(column) != 0"
-                >{{sortDescriptions.getIndex(column)}}</span>
-                <column-resizer v-if="settings.canResizeColumns" :height="colResizerHeight" />
-              </div>
-            </th>
-            <th v-if="showRowActionsOnRight" :class="{sticky: settings.stickyHeaders}">Actions</th>
-          </tr>
+          <data-grid-column-headers 
+            :settings="settings" 
+            :columns="columns"
+            :showActionsOnLeft="showRowActionsOnLeft"
+            :showActionsOnRight="showRowActionsOnRight"
+            :colResizerHeight="colResizerHeight"
+            :colDropperHeight="colDropperHeight"
+            :sortDescriptions="sortDescriptions"
+            @sort="onSort" />
         </thead>
         <tbody>
           <tr v-for="(item, rowindex) in items" :key="rowindex" ref="bodyRows">
@@ -94,27 +64,26 @@
 
 <script lang="ts">
 import { Component, Prop, Vue, Watch, Ref, Emit } from "vue-property-decorator";
-import ColumnResizer from "./ColumnResizer.vue";
 import RowResizer from "./RowResizer.vue";
-import ColumnDropZone from "./ColumnDropZone.vue";
 import { DroppedEvent } from "./ColumnDropZone.vue";
 import ActionMenu from "./ActionMenu.vue";
 import ActionBar from "./ActionBar.vue";
 import ContextMenu from "./ContextMenu.vue";
 import SearchBar from "./SearchBar.vue";
+import DataGridColumnHeaders from "./DataGridColumnHeaders.vue";
 import DataGridSettings from "./types/DataGridSettings";
 import { SortDescriptions, SortDirection } from "./types/SortDescriptions";
 import Command from "./types/Command";
+import { SortEvnet } from './DataGridColumnHeader.vue';
 
 @Component({
   components: {
-    ColumnResizer,
     RowResizer,
-    ColumnDropZone,
     ActionMenu,
-    ActionBar,
     ContextMenu,
-    SearchBar
+    ActionBar,
+    SearchBar,
+    DataGridColumnHeaders,
   }
 })
 export default class DataGrid extends Vue {
@@ -204,7 +173,7 @@ export default class DataGrid extends Vue {
     return this.hasRowActions && this.settings.rowActionsPosition >= 0;
   }
 
-  get hasPinnedRows(): boolean {
+  get hasPinnedColumns(): boolean {
     return this.pinnedColumns && this.pinnedColumns.length != 0;
   }
 
@@ -218,15 +187,6 @@ export default class DataGrid extends Vue {
     return payload;
   }
 
-  handleDragStart(e: DragEvent) {
-    if (!this.settings.canReorderColumns) return;
-
-    if (e.dataTransfer) e.dataTransfer.setData("text/plain", "");
-
-    const targetElement = e.target as HTMLTableHeaderCellElement;
-    targetElement.style.cursor = "grabbing";
-    this.from = targetElement.cellIndex;
-  }
 
   handleMainContextMenu(columnIndex: number, e: MouseEvent) {
     this.isMainContextMenuOpen = true;
@@ -270,7 +230,6 @@ export default class DataGrid extends Vue {
 
   configure() {
     this.configureOverlays();
-    this.configureStickyHeaders();
     this.configureSortDescriptions();
   }
 
@@ -286,20 +245,6 @@ export default class DataGrid extends Vue {
     this.rowResizerWidth = this.settings.canResizeRows
       ? this.table.offsetWidth
       : 0;
-  }
-
-  configureStickyHeaders() {
-    const headerRow = this.headRow;
-    const top = this.settings.stickyHeaders
-      ? headerRow.getBoundingClientRect().top + "px"
-      : "0";
-
-    const children = headerRow.children;
-
-    for (let i = 0; i < children.length; ++i) {
-      const element = children[i] as HTMLElement;
-      element.style.top = top;
-    }
   }
 
   configureSortDescriptions() {
@@ -336,6 +281,32 @@ export default class DataGrid extends Vue {
   onPinnedContextMenuClosed() {
     this.isPinnedContextMenuOpen = false;
     this.pinnedContextMenuOpenedOnColumn = undefined;
+  }
+
+  @Emit("sort")
+  onSort(e: SortEvnet) {
+    if(e.ctrlKey) {
+      if(e.index == -1) {
+        this.sortDescriptions.add({
+          column: e.column,
+          direction: SortDirection.Ascending
+        })
+      } else {
+        this.sortDescriptions.remove(e.column);
+      }
+    } else {
+      if(e.index == -1) {
+        this.sortDescriptions.clear();
+        this.sortDescriptions.add({
+          column: e.column,
+          direction: SortDirection.Ascending
+        });
+      } else {
+        this.sortDescriptions.flipDirection(e.column)
+      }
+    }
+
+    return this.sortDescriptions.clone();
   }
 
   sortBy(column: string, e: MouseEvent) {
@@ -425,65 +396,9 @@ table {
   border-collapse: collapse;
   width: 100%;
 }
-th {
-  background: linear-gradient(#ffffff, #cccccc, #aaaaaa);
-  cursor: default;
-  user-select: none;
-}
-[draggable="true"] {
-  cursor: grab;
-}
-th,
 td {
   border: 1px solid #cccccc;
   position: relative;
-}
-.sticky {
-  position: sticky;
-}
-.header {
-  display: flex;
-  flex-flow: row nowrap;
-  justify-content: center;
-}
-.header-text {
-  flex: 1 0 auto;
-}
-.sort-indicator {
-  display: flex;
-  flex-flow: column nowrap;
-  justify-content: center;
-  cursor: pointer;
-}
-.sort-indicator .asc {
-  height: 0;
-  width: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 6px solid black;
-  margin-bottom: 2px;
-}
-.sort-indicator .asc.hide {
-  opacity: 0;
-}
-.sort-indicator .dsc {
-  height: 0;
-  width: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid black;
-  margin-top: 2px;
-}
-.sort-indicator .dsc.hide {
-  opacity: 0;
-}
-.sort-index {
-  background: #007bff;
-  border-radius: 50%;
-  color: white;
-  font-size: 10px;
-  margin: auto 3px auto 3px;
-  min-width: 10px;
 }
 .actions-cell {
   text-align: center;
